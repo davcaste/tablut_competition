@@ -47,7 +47,16 @@ class Tablut(Game):
         self.dimension = (9, 9)
 
         self.directions = ((0, 1), (0, -1), (1, 0), (-1, 0))  # su giù destra sinistra
+
         self.central_cross = ((4, 4), (4, 5), (5, 4), (4, 3), (3, 4))
+
+        self.n_checkers = (8,16)
+
+        self.white = ((2, 4), (3, 4), (4, 2), (4, 3), (4, 5), (4, 6), (5, 4), (6, 4), (4, 4))
+
+        self.black = ((0, 3), (0, 4), (0, 5), (1, 4), (3, 0), (3, 8), (4, 0), (4, 1), (4, 7), (4, 8), (5, 0), (5, 8), (7, 4), (8, 3), (8, 4), (8, 5))
+
+        self.previous_states = []  #maybe we will initialize with initial state (depending when we call draw)
 
     # definisco le azioni possibili:
     # -struttura ((x,y),('sopra',1),'num2,num3,num4) or dictionary(key=(pos_X,pos_Y),value=[(pos_X_finale,pos_Y_finale),(..)...lista delle possibili posizioni finali..]
@@ -87,14 +96,22 @@ class Tablut(Game):
         return tuple(possible_actions)
 
     # definiamo lo stato successivo
+    ####### bisogna modificare il fatto che non mangia se schiaccio un bianco contro il castello e dentro c'è il re o
+    ####### se schiaccio un nero contro il campo e dentro il campo c'è un nero
     def result(self, state, move):
+        white_pos = list(self.white)
+        black_pos = list(self.black)
         if state[0] == 'B':  # swap turn
             state[0] = 'W'
             other, my = 'w', 'b'
+            black_pos.append(move[1])
+            black_pos.remove(move[0])
 
         else:
             state[0] = 'B'
             other, my = 'b', 'w'
+            white_pos.append(move[1])
+            white_pos.remove(move[0])
 
         state[1][move[0]], state[1][move[1]] = state[1][move[1]], state[1][
             move[0]]  # swap the current position with an empty tile
@@ -105,6 +122,21 @@ class Tablut(Game):
                 super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
                 if state[1][super_neighbor] == my or state[1][super_neighbor] in self.all_camps or state[1][super_neighbor] == self.castle:
                     state[1][neighbor] = 'e'
+                    if state[0] == 'B':
+                        black_pos.remove(neighbor)
+                    else:
+                        white_pos.remove(neighbor)
+        self.black = tuple(black_pos)
+        self.white = tuple(white_pos)
+
+
+        current_checkers = (len(self.white), len(self.black))
+        if self.n_checkers == current_checkers:
+            self.previous_states.append(state[1])
+        else:
+            self.previous_states = [state[1]]
+            self.n_checkers = current_checkers
+
 
         return state
 
@@ -128,6 +160,8 @@ class Tablut(Game):
                     or ((state[1][k_pos[0], k_pos[1] - 1] == 'b' or state[1][k_pos[0], k_pos[1] - 1] in self.all_camps)
                         and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or state[1][k_pos[0], k_pos[1] + 1] in self.all_camps)):
                 return True
+        if self.draw(state):
+            return True
         return False
 
     # preso lo state ritorna quale gocatore deve muovere (questa info deve essere dentro lo state)
@@ -136,17 +170,25 @@ class Tablut(Game):
 
     # definisce la condizione di pareggio (da decidere se implementare)
     def draw(self, state):
-        pass
+        current_checkers = (len(self.white), len(self.black))
+        if current_checkers == self.n_checkers:
+            if state[1] in self.previous_states:
+                return True
+        else:
+            return False
+
 
     # presa una condizione di vittoria e un giocatore ritorna un punteggio (?)
     def utility(self, state, player):
-        if self.terminal_test(state) and state[0] == 'B' and player == 'W':
+        if self.draw(state):
+            return 0
+        elif state[0] == 'B' and player == 'W':
             return 1
-        elif self.terminal_test(state) and state[0] == 'W' and player == 'W':
+        elif state[0] == 'W' and player == 'W':
             return -1
-        elif self.terminal_test(state) and state[0] == 'W' and player == 'B':
+        elif state[0] == 'W' and player == 'B':
             return 1
-        elif self.terminal_test(state) and state[0] == 'B' and player == 'B':
+        elif state[0] == 'B' and player == 'B':
             return -1
 
     # trasforma il result in una striga json da mandare al server
