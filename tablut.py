@@ -121,14 +121,14 @@ class Tablut(Game):
             if state[1][neighbor] == other:
                 super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
                 if state[1][super_neighbor] == my or state[1][super_neighbor] in self.all_camps or state[1][super_neighbor] == self.castle:
-                    state[1][neighbor] = 'e'
-                    if state[0] == 'B':
-                        black_pos.remove(neighbor)
-                    else:
-                        white_pos.remove(neighbor)
+                    if (state[0] == 'B' and state[1][super_neighbor] not in black_pos and state[1][super_neighbor] in self.all_camps) or (state[0] == 'W' and state[1][super_neighbor] not in white_pos and state[1][super_neighbor] in self.castle):
+                        state[1][neighbor] = 'e'
+                        if state[0] == 'B':
+                            black_pos.remove(neighbor)
+                        else:
+                            white_pos.remove(neighbor)
         self.black = tuple(black_pos)
         self.white = tuple(white_pos)
-
 
         current_checkers = (len(self.white), len(self.black))
         if self.n_checkers == current_checkers:
@@ -148,17 +148,17 @@ class Tablut(Game):
         k_pos=k_pos[0]
         if k_pos in self.winning:
             return True
-        if (k_pos in self.central_cross):
-            if (state[1][k_pos[0] + 1, k_pos[1]] == 'b' or (k_pos + 1, k_pos[1]) == self.castle) \
+        if k_pos in self.central_cross:
+            if ((state[1][k_pos[0] + 1, k_pos[1]] == 'b' or (k_pos + 1, k_pos[1]) == self.castle) \
                     and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) \
                     and (state[1][k_pos[0], k_pos[1] - 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) \
-                    and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle):
+                    and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) and state[0]=='W'):
                 return True
         else:
-            if ((state[1][k_pos[0] + 1, k_pos[1]] == 'b' or state[1][k_pos[0] + 1, k_pos[1]] in self.all_camps)
+            if (((state[1][k_pos[0] + 1, k_pos[1]] == 'b' or state[1][k_pos[0] + 1, k_pos[1]] in self.all_camps)
                 and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or state[1][k_pos[0] - 1, k_pos[1]] in self.all_camps))\
                     or ((state[1][k_pos[0], k_pos[1] - 1] == 'b' or state[1][k_pos[0], k_pos[1] - 1] in self.all_camps)
-                        and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or state[1][k_pos[0], k_pos[1] + 1] in self.all_camps)):
+                        and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or state[1][k_pos[0], k_pos[1] + 1] in self.all_camps)) and state[0]=='W'):
                 return True
         if self.draw(state):
             return True
@@ -175,7 +175,6 @@ class Tablut(Game):
             if state[1] in self.previous_states:
                 return True
         return False
-
 
     # presa una condizione di vittoria e un giocatore ritorna un punteggio (?)
     def utility(self, state, player):
@@ -200,3 +199,256 @@ class Tablut(Game):
 
     # res = np.where(array=='k')
     # list(zip(res[0], res[1])) ciao
+
+
+# Ritorna True se il re ha tutte le linee coperte (da una pedina qualsiasi, da un campo o dal castello
+def free_king_line(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    check = False
+    for dire in Tablut.directions:
+        k_pos = (k_pos[0]+dire[0],k_pos[1]+dire[1])
+        while state[1][k_pos[0], k_pos[1]] == 'e' or k_pos[0] != 8 or k_pos[0] != 0 or k_pos[1] != 8 or k_pos[1] != 0 or k_pos in Tablut.all_camps or k_pos == Tablut.castle:
+            k_pos = (k_pos[0]+dire[0],k_pos[1]+dire[1])
+        if (k_pos[0] == 0 or k_pos[0] == 8 or k_pos[1] == 0 or k_pos[1] == 8) and state[1][k_pos[0],k_pos[1] == 'e' and k_pos not in Tablut.all_camps]:  # metto questo if perchè io potrei essere uscito nell'ultima cella sia perchè ho trovato una pedina\campo sia perche ho finito la scacchiera
+            check = False
+            break
+        else:
+            check = True
+    return check
+
+
+# Ritorna True se tutte le righe e colonne della scacchiera sono coperte
+def free_line(state):
+    check_r = 0
+    check_c = 0
+    for i in range(9):
+        for j in range(9):
+            if (state[1][i,j] == 'e' or state[1][i,j] == 'k') and (i,j) not in Tablut.all_camps and (i,j) not in Tablut.castle:
+                check_r += 1
+            if (state[1][j,i] == 'e' or state[1][i,j] == 'k') and (j,i) not in Tablut.all_camps and (j,i) not in Tablut.castle:
+                check_c += 1
+    if check_c == 9 or check_r == 9:
+        return False
+    return True
+
+
+# Ritorna il numero di pedine nere attaccate al re
+def near_king(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    n_black=0
+    for dire in Tablut.directions:
+        if state[1][k_pos[0]+dire[0], k_pos[1]+dire[1]] == 'b':
+            n_black += 1
+    return n_black
+
+
+# Ritorna il numero di pedine nere in diagonale
+def diag(state):
+    black = np.where(state[1] == 'b')
+    black = tuple(zip(black[0], black[1]))
+    count = 0
+    for i in range(len(black)-1):
+        for j in range(i+1, len((black)-1)):
+            if (black[i][0] == black[j][0] + 1 or black[i][0] == black[j][0] - 1) and (black[i][1] == black[j][1] + 1 or black[i][1] == black[j][1] - 1):
+                count += 1
+    return count
+
+
+# Ritorna il numero di pedine nere
+def black_pawns(state):
+    black = np.where(state[1] == 'b')
+    black = tuple(zip(black[0], black[1]))
+    n_black = len(black)
+    return n_black
+
+
+# Ritorna il numero di pedine bianche
+def white_pawns(state):
+    white = np.where(state[1] == 'w')
+    white = tuple(zip(white[0], white[1]))
+    n_white = len(white)
+    return n_white
+
+
+# Ritorna True se il re è minacciato
+def king_threat(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    for dire in Tablut.directions:
+        new_pos = (k_pos[0] + dire[0], k_pos[1] + dire[1])
+        if state[1][new_pos] == 'b' or new_pos in Tablut.all_camps:
+            while state[1][new_pos] == 'e' or new_pos not in Tablut.castle or new_pos not in Tablut.all_camps or new_pos[0] != 8 or new_pos[0] != 0 or new_pos[1] != 0 or new_pos[1] != 8:
+                new_pos = (new_pos[0] + dire[0], new_pos[1] + dire[1])
+                if state[1][new_pos] == 'b':
+                    return True
+    return False
+
+
+# Return the number of white checkers under threat
+def white_threat(state):
+    white_pos = np.where(state[1] == 'w')
+    white_pos = tuple(zip(white_pos[0], white_pos[1]))
+    count = 0
+    for white in white_pos:
+        for dire in Tablut.directions:
+            new_pos = (white[0] + dire[0], white[1] + dire[1])
+            if state[1][new_pos] == 'b' or new_pos in Tablut.all_camps:
+                while state[1][new_pos] == 'e' or new_pos not in Tablut.castle or new_pos not in Tablut.all_camps or new_pos[0] != 8 or new_pos[0] != 0 or new_pos[1] != 0 or new_pos[1] != 8:
+                    new_pos = (new_pos[0] + dire[0], new_pos[1] + dire[1])
+                    if state[1][new_pos] == 'b':
+                        count += 1
+    return count
+
+
+# Return the number of black under threat
+def black_threat(state):
+    black_pos = np.where(state[1] == 'b')
+    black_pos = tuple(zip(black_pos[0], black_pos[1]))
+    count = 0
+    for black in black_pos:
+        for dire in Tablut.directions:
+            new_pos = (black[0] + dire[0], black[1] + dire[1])
+            if state[1][new_pos] == 'w' or state[1][new_pos] == 'k' or new_pos in Tablut.all_camps:
+                while state[1][new_pos] == 'e' or new_pos not in Tablut.castle or new_pos not in Tablut.all_camps or new_pos[0] != 8 or new_pos[0] != 0 or new_pos[1] != 0 or new_pos[1] != 8:
+                    new_pos = (new_pos[0] + dire[0], new_pos[1] + dire[1])
+                    if state[1][new_pos] == 'w' or state[1][new_pos] == 'k':
+                        count += 1
+    return count
+
+
+def king_outside_castle(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    if k_pos != Tablut.castle:
+        return True
+    return False
+
+
+def black_pawns_in_king_quad(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    n_black = 0
+    if k_pos[0] > 4:
+        if k_pos[1] > 4:
+            matrix = np.array(state[1][5:, 5:])
+            black_pos = np.where(matrix == 'b')
+            black_pos = tuple(zip(black_pos[0], black_pos[1]))
+            n_black = len(black_pos)
+        elif k_pos[1] < 4:
+            matrix = np.array(state[1][5:, :4])
+            black_pos = np.where(matrix == 'b')
+            black_pos = tuple(zip(black_pos[0], black_pos[1]))
+            n_black = len(black_pos)
+    elif k_pos[0] < 4:
+        if k_pos[1] > 4:
+            matrix = np.array(state[1][:4, 5:])
+            black_pos = np.where(matrix == 'b')
+            black_pos = tuple(zip(black_pos[0], black_pos[1]))
+            n_black = len(black_pos)
+        elif k_pos[1] < 4:
+            matrix = np.array(state[1][:4, :4])
+            black_pos = np.where(matrix == 'b')
+            black_pos = tuple(zip(black_pos[0], black_pos[1]))
+            n_black = len(black_pos)
+    return n_black
+
+
+def black_pawns_in_king_near_quad(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    n_black = 0
+    if k_pos[0] > 4:
+        if k_pos[1] > 4:
+            matrix1 = np.array(state[1][5:, :4])
+            matrix2 = np.array(state[1][:4, 5:])
+            black_pos1 = np.where(matrix1 == 'b')
+            black_pos2 = np.where(matrix2 == 'b')
+            black_pos1 = tuple(zip(black_pos1[0], black_pos1[1]))
+            black_pos2 = tuple(zip(black_pos2[0], black_pos2[1]))
+            n_black = len(black_pos1) + len(black_pos2)
+        elif k_pos[1] < 4:
+            matrix1 = np.array(state[1][:4, :4])
+            matrix2 = np.array(state[1][5:, 5:])
+            black_pos1 = np.where(matrix1 == 'b')
+            black_pos2 = np.where(matrix2 == 'b')
+            black_pos1 = tuple(zip(black_pos1[0], black_pos1[1]))
+            black_pos2 = tuple(zip(black_pos2[0], black_pos2[1]))
+            n_black = len(black_pos1) + len(black_pos2)
+    elif k_pos[0] < 4:
+        if k_pos[1] < 4:
+            matrix1 = np.array(state[1][5:, :4])
+            matrix2 = np.array(state[1][:4, 5:])
+            black_pos1 = np.where(matrix1 == 'b')
+            black_pos2 = np.where(matrix2 == 'b')
+            black_pos1 = tuple(zip(black_pos1[0], black_pos1[1]))
+            black_pos2 = tuple(zip(black_pos2[0], black_pos2[1]))
+            n_black = len(black_pos1) + len(black_pos2)
+        elif k_pos[1] > 4:
+            matrix1 = np.array(state[1][:4, :4])
+            matrix2 = np.array(state[1][5:, 5:])
+            black_pos1 = np.where(matrix1 == 'b')
+            black_pos2 = np.where(matrix2 == 'b')
+            black_pos1 = tuple(zip(black_pos1[0], black_pos1[1]))
+            black_pos2 = tuple(zip(black_pos2[0], black_pos2[1]))
+            n_black = len(black_pos1) + len(black_pos2)
+    return n_black
+
+
+def black_pawns_when_king_in_cross(state):
+    k_pos = np.where(state[1] == 'k')
+    k_pos = tuple(zip(k_pos[0], k_pos[1]))
+    k_pos = k_pos[0]
+    n_black = 0
+    if k_pos[0] != k_pos[1] and k_pos[0] == 4:
+        matrix = np.array(state[1][:, :4])
+        black_pos = np.where(matrix == 'b')
+        black_pos = tuple(zip(black_pos[0], black_pos[1]))
+        n_black = len(black_pos)
+    elif k_pos[0] != k_pos[1] and k_pos[0] == 4:
+        matrix = np.array(state[1][:4, :])
+        black_pos = np.where(matrix == 'b')
+        black_pos = tuple(zip(black_pos[0], black_pos[1]))
+        n_black = len(black_pos)
+    return n_black
+
+
+def n_white_in_angle(state):
+    n_white = 0
+    if state[1][0,0] == 'w':
+        n_white += 1
+    if state[1][8,0] == 'w':
+        n_white += 1
+    if state[1][0,8] == 'w':
+        n_white += 1
+    if state[1][8,8] == 'w':
+        n_white += 1
+    return n_white
+
+
+def n_white_in_victory(state):
+    white_pos = np.where(state[1] == 'w')
+    white_pos = tuple(zip(white_pos[0], white_pos[1]))
+    n_white = 0
+    for white in white_pos:
+        if white in Tablut.winning:
+            n_white += 1
+    return n_white
+
+
+def n_white_in_victory_near_white(state):
+    white_pos = np.where(state[1] == 'w')
+    white_pos = tuple(zip(white_pos[0], white_pos[1]))
+    n_white = 0
+    for white in white_pos:
+        if white in Tablut.winning:
+            if ((white[0] + 2 <= 8 and state[1][white[0] + 2, white[1]] == 'w') or (white[1] + 2 <= 8 and state[1][white[0], white[1] + 2] == 'w') or (white[0] - 2 >= 0 and state[1][white[0] - 2, white[1]] == 'w') or (white[1] - 2 >= 0 and state[1][white[0], white[1] - 2] == 'w')):
+                n_white += 1
+    return n_white
