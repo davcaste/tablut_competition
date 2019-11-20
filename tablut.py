@@ -121,31 +121,31 @@ class Tablut(Game):
             if state[1][neighbor] == other:
                 super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
                 if state[1][super_neighbor] == my or state[1][super_neighbor] in self.all_camps or state[1][super_neighbor] == self.castle:
-                    if (state[0] == 'B' and state[1][super_neighbor] not in black_pos and state[1][super_neighbor] in self.all_camps) or (state[0] == 'W' and state[1][super_neighbor] not in white_pos and state[1][super_neighbor] in self.castle):
-                        state[1][neighbor] = 'e'
-                        if state[0] == 'B':
-                            black_pos.remove(neighbor)
-                        else:
-                            white_pos.remove(neighbor)
+                    state[1][neighbor] = 'e'
+                    if state[0] == 'B':
+                        black_pos.remove(neighbor)
+                    else:
+                        white_pos.remove(neighbor)
         self.black = tuple(black_pos)
         self.white = tuple(white_pos)
-
         current_checkers = (len(self.white), len(self.black))
         if self.n_checkers == current_checkers:
             self.previous_states.append(state[1])
         else:
             self.previous_states = [state[1]]
             self.n_checkers = current_checkers
-
-
         return state
 
     # ritorna True quando la scacchiera è in una condizione di vittoria per uno dei due giocaotri
-    def terminal_test(self, state):
+    def terminal_test(self, state, action):
         k_pos = np.where(state[1] == 'k')
         k_pos = tuple(zip(k_pos[0], k_pos[
             1]))  # mi restituisce una tupla con dentro una tupla che sono la x e la y del king perchè se non metto tuple mi restituirebbe un zip object
-        k_pos=k_pos[0]
+        k_pos = k_pos[0]
+        near = []
+        for dire in self.directions:
+            supp = (k_pos[0] + dire[0], k_pos[1] + dire[1])
+            near.append(supp)
         if k_pos in self.winning:
             return True
         if k_pos in self.central_cross:
@@ -153,13 +153,15 @@ class Tablut(Game):
                     and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) \
                     and (state[1][k_pos[0], k_pos[1] - 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) \
                     and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) and state[0]=='W'):
-                return True
+                if action[1] in near:
+                    return True
         else:
-            if (((state[1][k_pos[0] + 1, k_pos[1]] == 'b' or state[1][k_pos[0] + 1, k_pos[1]] in self.all_camps)
-                and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or state[1][k_pos[0] - 1, k_pos[1]] in self.all_camps))\
-                    or ((state[1][k_pos[0], k_pos[1] - 1] == 'b' or state[1][k_pos[0], k_pos[1] - 1] in self.all_camps)
-                        and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or state[1][k_pos[0], k_pos[1] + 1] in self.all_camps)) and state[0]=='W'):
-                return True
+            if (state[1][k_pos[0] + 1, k_pos[1]] == 'b' or (k_pos[0] + 1, k_pos[1]) in self.all_camps) and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or (k_pos[0] - 1, k_pos[1]) in self.all_camps):
+                if action[1] == (k_pos[0] + 1, k_pos[1]) or action[1] == (k_pos[0] - 1, k_pos[1]):
+                    return True
+            if (state[1][k_pos[0], k_pos[1] - 1] == 'b' or (k_pos[0], k_pos[1] - 1) in self.all_camps) and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or (k_pos[0], k_pos[1] + 1) in self.all_camps):
+                if action[1] == (k_pos[0], k_pos[1] + 1) or action[1] == (k_pos[0], k_pos[1] - 1):
+                    return True
         if self.draw(state):
             return True
         return False
