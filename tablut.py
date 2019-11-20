@@ -174,8 +174,7 @@ class Tablut(Game):
         if current_checkers == self.n_checkers:
             if state[1] in self.previous_states:
                 return True
-        else:
-            return False
+        return False
 
 
     # presa una condizione di vittoria e un giocatore ritorna un punteggio (?)
