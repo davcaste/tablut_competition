@@ -56,7 +56,7 @@ class Tablut(Game):
 
         self.black = ((0, 3), (0, 4), (0, 5), (1, 4), (3, 0), (3, 8), (4, 0), (4, 1), (4, 7), (4, 8), (5, 0), (5, 8), (7, 4), (8, 3), (8, 4), (8, 5))
 
-        self.previous_states = []  #maybe we will initialize with initial state (depending when we call draw)
+        self.previous_states = [self.initial_state]  # initialized with initial state
 
     # definisco le azioni possibili:
     # -struttura ((x,y),('sopra',1),'num2,num3,num4) or dictionary(key=(pos_X,pos_Y),value=[(pos_X_finale,pos_Y_finale),(..)...lista delle possibili posizioni finali..]
@@ -126,6 +126,7 @@ class Tablut(Game):
                         black_pos.remove(neighbor)
                     else:
                         white_pos.remove(neighbor)
+
         self.black = tuple(black_pos)
         self.white = tuple(white_pos)
 
@@ -174,8 +175,7 @@ class Tablut(Game):
         if current_checkers == self.n_checkers:
             if state[1] in self.previous_states:
                 return True
-        else:
-            return False
+        return False
 
 
     # presa una condizione di vittoria e un giocatore ritorna un punteggio (?)
