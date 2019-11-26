@@ -1,5 +1,6 @@
 from games import Game
 import numpy as np
+import copy
 
 
 # stato= numpy array riempito con caratteri che rappresentano vuoto, bianco, nero, re ('e','w','b','k')
@@ -56,12 +57,13 @@ class Tablut(Game):
 
         self.black = ((0, 3), (0, 4), (0, 5), (1, 4), (3, 0), (3, 8), (4, 0), (4, 1), (4, 7), (4, 8), (5, 0), (5, 8), (7, 4), (8, 3), (8, 4), (8, 5))
 
-        self.previous_states = [self.initial_state]  # initialized with initial state
+        self.previous_states = []  #maybe we will initialize with initial state (depending when we call draw)
 
     # definisco le azioni possibili:
     # -struttura ((x,y),('sopra',1),'num2,num3,num4) or dictionary(key=(pos_X,pos_Y),value=[(pos_X_finale,pos_Y_finale),(..)...lista delle possibili posizioni finali..]
     # le azioni possibili le passiamo come un generatore
     def actions(self, state):
+
         black_pos = tuple(zip(*np.where(state[1] == 'b')))  # all current black positions
         white_pos = tuple(zip(*np.where(state[1] == 'w'))) + tuple(
             zip(*np.where(state[1] == 'k')))  # all current white positions + king position
@@ -99,43 +101,43 @@ class Tablut(Game):
     ####### bisogna modificare il fatto che non mangia se schiaccio un bianco contro il castello e dentro c'è il re o
     ####### se schiaccio un nero contro il campo e dentro il campo c'è un nero
     def result(self, state, move):
+        state1 = copy.deepcopy(state)
         white_pos = list(self.white)
         black_pos = list(self.black)
-        if state[0] == 'B':  # swap turn
-            state[0] = 'W'
+        if state1[0] == 'B':  # swap turn
+            state1[0] = 'W'
             other, my = 'w', 'b'
             black_pos.append(move[1])
             black_pos.remove(move[0])
 
         else:
-            state[0] = 'B'
+            state1[0] = 'B'
             other, my = 'b', 'w'
             white_pos.append(move[1])
             white_pos.remove(move[0])
 
-        state[1][move[0]], state[1][move[1]] = state[1][move[1]], state[1][
+        state1[1][move[0]], state1[1][move[1]] = state1[1][move[1]], state1[1][
             move[0]]  # swap the current position with an empty tile
 
         for dire in self.directions:
             neighbor = (move[1][0] + dire[0], move[1][1] + dire[1])
-            if state[1][neighbor] == other:
+            if state1[1][neighbor] == other:
                 super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
-                if state[1][super_neighbor] == my or state[1][super_neighbor] in self.all_camps or state[1][super_neighbor] == self.castle:
-                    state[1][neighbor] = 'e'
-                    if state[0] == 'B':
+                if state1[1][super_neighbor] == my or state1[1][super_neighbor] in self.all_camps or state1[1][super_neighbor] == self.castle:
+                    state1[1][neighbor] = 'e'
+                    if state1[0] == 'B':
                         black_pos.remove(neighbor)
                     else:
                         white_pos.remove(neighbor)
-
         self.black = tuple(black_pos)
         self.white = tuple(white_pos)
         current_checkers = (len(self.white), len(self.black))
         if self.n_checkers == current_checkers:
-            self.previous_states.append(state[1])
+            self.previous_states.append(state1[1])
         else:
-            self.previous_states = [state[1]]
+            self.previous_states = [state1[1]]
             self.n_checkers = current_checkers
-        return state
+        return state1
 
     # ritorna True quando la scacchiera è in una condizione di vittoria per uno dei due giocaotri
     def terminal_test(self, state, action):
@@ -179,7 +181,6 @@ class Tablut(Game):
                 return True
         return False
 
-
     # presa una condizione di vittoria e un giocatore ritorna un punteggio (?)
     def utility(self, state, player):
         if self.draw(state):
@@ -210,16 +211,15 @@ def free_king_line(state):
     k_pos = np.where(state[1] == 'k')
     k_pos = tuple(zip(k_pos[0], k_pos[1]))
     k_pos = k_pos[0]
-    check = False
+    check = 0
     for dire in Tablut.directions:
         k_pos = (k_pos[0]+dire[0],k_pos[1]+dire[1])
         while state[1][k_pos[0], k_pos[1]] == 'e' or k_pos[0] != 8 or k_pos[0] != 0 or k_pos[1] != 8 or k_pos[1] != 0 or k_pos in Tablut.all_camps or k_pos == Tablut.castle:
-            k_pos = (k_pos[0]+dire[0],k_pos[1]+dire[1])
-        if (k_pos[0] == 0 or k_pos[0] == 8 or k_pos[1] == 0 or k_pos[1] == 8) and state[1][k_pos[0],k_pos[1] == 'e' and k_pos not in Tablut.all_camps]:  # metto questo if perchè io potrei essere uscito nell'ultima cella sia perchè ho trovato una pedina\campo sia perche ho finito la scacchiera
-            check = False
-            break
+            k_pos = (k_pos[0]+dire[0], k_pos[1]+dire[1])
+        if not ((k_pos[0] == 0 or k_pos[0] == 8 or k_pos[1] == 0 or k_pos[1] == 8) and state[1][k_pos[0],k_pos[1] == 'e' and k_pos not in Tablut.all_camps]):  # metto questo if perchè io potrei essere uscito nell'ultima cella sia perchè ho trovato una pedina\campo sia perche ho finito la scacchiera
+            check += 1
         else:
-            check = True
+            check = 0
     return check
 
 
@@ -227,15 +227,18 @@ def free_king_line(state):
 def free_line(state):
     check_r = 0
     check_c = 0
+    count = 0
     for i in range(9):
         for j in range(9):
-            if (state[1][i,j] == 'e' or state[1][i,j] == 'k') and (i,j) not in Tablut.all_camps and (i,j) not in Tablut.castle:
+            if (state[1][i,j] == 'e' or state[1][i,j] == 'k') and (i, j) not in Tablut.all_camps and (i, j) not in Tablut.castle:
                 check_r += 1
-            if (state[1][j,i] == 'e' or state[1][i,j] == 'k') and (j,i) not in Tablut.all_camps and (j,i) not in Tablut.castle:
+            if (state[1][j,i] == 'e' or state[1][i,j] == 'k') and (j, i) not in Tablut.all_camps and (j,  i) not in Tablut.castle:
                 check_c += 1
-    if check_c == 9 or check_r == 9:
-        return False
-    return True
+        if check_r != 9:
+            count +=1
+        if check_c != 9:
+            count +=1
+    return count
 
 
 # Ritorna il numero di pedine nere attaccate al re
@@ -456,3 +459,74 @@ def n_white_in_victory_near_white(state):
             if ((white[0] + 2 <= 8 and state[1][white[0] + 2, white[1]] == 'w') or (white[1] + 2 <= 8 and state[1][white[0], white[1] + 2] == 'w') or (white[0] - 2 >= 0 and state[1][white[0] - 2, white[1]] == 'w') or (white[1] - 2 >= 0 and state[1][white[0], white[1] - 2] == 'w')):
                 n_white += 1
     return n_white
+
+
+def white_evaluation_function(state):
+    if state[0] == 'W':
+        weights = [10, 2, -10, -0.5, -0.6, 1, -80, -2, 1, 2, -1, -0.5, -1, 3, 1, 2]
+    else:
+        weights = [-80, -2, 10, 0.5, 0.6, -1, 20, 2, -1, -2, 1, 0.5, 1, -3, -1, -2]
+    w1 = free_king_line(state) * weights[0]
+    w2 = free_line(state) * weights[1]
+    w3 = near_king(state) * weights[2]
+    w4 = diag(state) * weights[3]
+    w5 = black_pawns(state) * weights[4]
+    w6 = white_pawns(state) * weights[5]
+    w7 = king_threat(state) * weights[6]
+    w8 = white_threat(state) * weights[7]
+    w9 = black_threat(state) * weights[8]
+    w10 = king_outside_castle(state) * weights[9]
+    w11 = black_pawns_in_king_quad(state) * weights[10]
+    w12 = black_pawns_in_king_near_quad(state) * weights[11]
+    w13 = black_pawns_when_king_in_cross(state) * weights[12]
+    w14 = n_white_in_angle(state) * weights[13]
+    w15 = n_white_in_victory(state) * weights[14]
+    w16 = n_white_in_victory_near_white(state) * weights[15]
+    weights_white = [w1 ,w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16]
+    return sum(weights_white)
+
+'''self.initial_state = ('W', np.array([['e', 'e', 'e', 'b', 'b', 'b', 'e', 'e', 'e'],
+                                             ['e', 'e', 'e', 'e', 'b', 'e', 'e', 'e', 'e'],
+                                             ['e', 'e', 'e', 'e', 'w', 'e', 'e', 'e', 'e'],
+                                             ['b', 'e', 'e', 'e', 'w', 'e', 'e', 'e', 'b'],
+                                             ['b', 'b', 'w', 'w', 'k', 'w', 'w', 'b', 'b'],
+                                             ['b', 'e', 'e', 'e', 'w', 'e', 'e', 'e', 'b'],
+                                             ['e', 'e', 'e', 'e', 'w', 'e', 'e', 'e', 'e'],
+                                             ['e', 'e', 'e', 'e', 'b', 'e', 'e', 'e', 'e'],
+                                             ['e', 'e', 'e', 'b', 'b', 'b', 'e', 'e', 'e']]))
+
+        self.keyboard = np.array([['e', 'w', 'w', 'c', 'c', 'c', 'w', 'w', 'e'],
+                                  ['w', 'e', 'e', 'e', 'c', 'e', 'e', 'e', 'e'],
+                                  ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e'],
+                                  ['c', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'c'],
+                                  ['c', 'c', 'e', 'e', 'k', 'e', 'e', 'c', 'c'],
+                                  ['c', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'c'],
+                                  ['w', 'e', 'e', 'e', 'e', 'e', 'e', 'e', 'e'],
+                                  ['w', 'e', 'e', 'e', 'c', 'e', 'e', 'e', 'e'],
+                                  ['e', 'w', 'w', 'c', 'c', 'c', 'w', 'w', 'e']])
+
+        self.camps = (
+        ((0, 3), (0, 4), (0, 5), (1, 4)), ((3, 0), (4, 0), (5, 0), (4, 1)), ((8, 3), (8, 4), (8, 5), (7, 4)),
+        ((3, 8), (4, 8), (5, 8), (4, 7)))
+
+        self.all_camps = self.camps[0] + self.camps[1] + self.camps[2] + self.camps[3]
+
+        self.castle = (4, 4)
+
+        self.winning = (
+        (0, 1), (0, 2), (1, 0), (2, 0), (0, 6), (0, 7), (6, 0), (7, 0), (8, 1), (8, 2), (1, 8), (2, 8), (6, 8), (7, 8),
+        (8, 6), (8, 7))
+
+        self.dimension = (9, 9)
+
+        self.directions = ((0, 1), (0, -1), (1, 0), (-1, 0))  # su giù destra sinistra
+
+        self.central_cross = ((4, 4), (4, 5), (5, 4), (4, 3), (3, 4))
+
+        self.n_checkers = (8,16)
+
+        self.white = ((2, 4), (3, 4), (4, 2), (4, 3), (4, 5), (4, 6), (5, 4), (6, 4), (4, 4))
+
+        self.black = ((0, 3), (0, 4), (0, 5), (1, 4), (3, 0), (3, 8), (4, 0), (4, 1), (4, 7), (4, 8), (5, 0), (5, 8), (7, 4), (8, 3), (8, 4), (8, 5))
+
+        self.previous_states = []  #maybe we will initialize with initial state (depending when we call draw)'''
