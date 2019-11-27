@@ -23,7 +23,7 @@ def main():
         exit(1)
 
     client = Client(host, port)
-    my_heuristic = tablut.white_evaluation_function
+    my_heuristic = tablut.Tablut.white_evaluation_function
     search = games.alphabeta_cutoff_search
 
     try:
@@ -31,6 +31,8 @@ def main():
         client.send_name("Capitano")
         # wait init state
         turn, state_np = client.recv_state()
+        print(turn, state_np)
+
         # game loop:
         while True:
             if color == turn:
@@ -38,6 +40,7 @@ def main():
                 if move != None:
                     client.send_move(move)
             state_np, turn = client.recv_state()
+            print (state_np, turn)
 
     finally:
         print('closing socket')
@@ -74,7 +77,7 @@ class Client:
         length_str = char + self.sock.recv(1)
         total = int.from_bytes(length_str, "big")
         state = self.sock.recv(total).decode("UTF-8")
-        #todo:
+
         state = state.replace('EMPTY', 'e')
         state = state.replace('THRONE', 'e')
         state = state.replace('KING', 'k')
