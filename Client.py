@@ -30,11 +30,11 @@ def main():
         # present name
         client.send_name("Capitano")
         # wait init state
-        state_np, turn = client.recv_state()
+        turn, state_np = client.recv_state()
         # game loop:
         while True:
             if color == turn:
-                move = search(state_np, tablut.Tablut(), d=2, cutoff_test=None, eval_fn=my_heuristic)
+                move = search((turn, state_np), tablut.Tablut(), d=2, cutoff_test=None, eval_fn=my_heuristic)
                 if move != None:
                     client.send_move(move)
             state_np, turn = client.recv_state()
@@ -73,32 +73,18 @@ class Client:
             char = self.sock.recv(1)
         length_str = char + self.sock.recv(1)
         total = int.from_bytes(length_str, "big")
-        msg = self.sock.recv(total)
+        state = self.sock.recv(total).decode("UTF-8")
+        #todo:
+        state = state.replace('EMPTY', 'e')
+        state = state.replace('THRONE', 'e')
+        state = state.replace('KING', 'k')
+        state = state.replace('BLACK', 'b')
+        state = state.replace('WHITE', 'w')
 
-        state_obj = json.loads(msg.decode("UTF-8"))
-        board = state_obj["board"]
-        turn = 'W' if state_obj["turn"] == "WHITE" else 'B'
+        state_dict = json.loads(state)
+        matrix = np.array(state_dict['board'])
 
-        state_obj = list(board)
-        state_numpy = np.zeros((9,9), dtype = int)
-
-        state_numpy = [list(state_numpy[i]) for i in range(9)]
-
-        for i in range(9):
-            for j in range(9):
-                if state_obj[i][j] == "BLACK":
-                    state_numpy[i][j] = 'b'
-                elif state_obj[i][j] == "WHITE":
-                    state_numpy[i][j] = 'w'
-                elif state_obj[i][j] == "KING":
-                    state_numpy[i][j] = 'k'
-                elif state_obj[i][j] == "EMPTY" or state_obj[i][j] == "THRONE":
-                    state_numpy[i][j] = 'e'
-
-            state_numpy[i] = np.array(state_numpy[i])
-        state_numpy = np.array(state_numpy)
-
-        return state_numpy, turn
+        return state_dict['turn'].capitalize(), matrix
 
     def close(self):
         self.sock.close()
