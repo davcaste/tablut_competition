@@ -39,7 +39,7 @@ def main():
                 move = search((turn, state_np), tablut.Tablut(), d=2, cutoff_test=None, eval_fn=my_heuristic)
                 if move != None:
                     client.send_move(move)
-            state_np, turn = client.recv_state()
+            turn, state_np = client.recv_state()
             print (state_np, turn)
 
     finally:
