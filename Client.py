@@ -13,28 +13,28 @@ def main():
 
     host = sys.argv[1]
 
-    if sys.argv[2] == 5800:     # WIHITE port
+    if sys.argv[2] == '5800':     # WIHITE port
         color = 'W'
         port = 5800
-    elif sys.argv[2] == 5801:   # BLACK port
+    elif sys.argv[2] == '5801':   # BLACK port
         color = 'B'
         port = 5801
     else:
         exit(1)
 
     client = Client(host, port)
-    my_heuristic = tablut.white_evaluation_function()
-    search = games.alphabeta_cutoff_search()
+    my_heuristic = tablut.white_evaluation_function
+    search = games.alphabeta_cutoff_search
 
     try:
         # present name
-        client.send_name("capitano")
+        client.send_name("Capitano")
         # wait init state
         state_np, turn = client.recv_state()
         # game loop:
         while True:
             if color == turn:
-                move = search(state_np, tablut.Tablut, d=2, cutoff_test=None, eval_fn=my_heuristic)
+                move = search(state_np, tablut.Tablut(), d=2, cutoff_test=None, eval_fn=my_heuristic)
                 if move != None:
                     client.send_move(move)
             state_np, turn = client.recv_state()
@@ -81,16 +81,22 @@ class Client:
 
         state_obj = list(board)
         state_numpy = np.zeros((9,9), dtype = int)
+
+        state_numpy = [list(state_numpy[i]) for i in range(9)]
+
         for i in range(9):
             for j in range(9):
                 if state_obj[i][j] == "BLACK":
-                    state_numpy[i,j] = 'b'
-                if state_obj[i][j] == "WHITE":
-                    state_numpy[i,j] = 'w'
-                if state_obj[i][j] == "KING":
-                    state_numpy[i,j] = 'k'
-                if state_obj[i][j] == "EMPTY" or  state_obj[i][j] == "THRONE":
-                    state_numpy[i,j] = 'e'
+                    state_numpy[i][j] = 'b'
+                elif state_obj[i][j] == "WHITE":
+                    state_numpy[i][j] = 'w'
+                elif state_obj[i][j] == "KING":
+                    state_numpy[i][j] = 'k'
+                elif state_obj[i][j] == "EMPTY" or state_obj[i][j] == "THRONE":
+                    state_numpy[i][j] = 'e'
+
+            state_numpy[i] = np.array(state_numpy[i])
+        state_numpy = np.array(state_numpy)
 
         return state_numpy, turn
 
