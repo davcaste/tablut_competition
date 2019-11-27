@@ -71,7 +71,7 @@ class Tablut(Game):
         invalid_tiles = white_pos + black_pos + self.castle  # tiles in which we can't go in or pass through apart for the camps
 
         # we check for which player i have to compute the possible moves
-        if any(state[0]) == 'B':  # if it's black's turn we check only the black positions
+        if state[0] == 'B':  # if it's black's turn we check only the black positions
             pos = black_pos
         else:
             pos = white_pos
