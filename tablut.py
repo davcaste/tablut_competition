@@ -92,7 +92,7 @@ class Tablut(Game):
             for dire in self.directions:
                 checkers = (elements[0] + dire[0], elements[1] + dire[1])  # we compute the final position (checkers) incrementing of 1 in that direction
                 while checkers not in invalid_tiles and (checkers[0] <= 8 and checkers[0] >= 0) and (checkers[1] <= 8 and checkers[1] >= 0) and state[1][checkers] == 'e':  # while we don't find an invalid position we go on incrementing
-                    possible_actions.append((elements, checkers))
+                    possible_actions.append(elements + checkers)
                     checkers = (checkers[0] + dire[0], checkers[1] + dire[1])
 
         print('queste sono le possible action')
@@ -102,7 +102,7 @@ class Tablut(Game):
     # definiamo lo stato successivo
     ####### bisogna modificare il fatto che non mangia se schiaccio un bianco contro il castello e dentro c'è il re o
     ####### se schiaccio un nero contro il campo e dentro il campo c'è un nero
-    def result(self, state, move):
+    def result1(self, state, move):
         print('dentro a result')
         state1 = copy.deepcopy(state)
         state1 = list(state1)
@@ -160,7 +160,7 @@ class Tablut(Game):
         print(state1[0])
         return tuple(state1)
 
-    def result1(self, state, move):
+    def result(self, state, move):
         actual_state = copy.deepcopy(state)
         paw = actual_state[1][move[0], move[1]]
         actual_state[1][move[0], move[1]], actual_state[1][move[2], move[3]] = actual_state[1][move[2], move[3]], \
@@ -173,26 +173,27 @@ class Tablut(Game):
         # check mangiato/end
         for dire in self.directions:
             neighbor = (move[2] + dire[0], move[3] + dire[1])
-            if (neighbor[0] and neighbor[1]) in range(9):
+            if neighbor[0] not in range(9) or neighbor[1] not in range(9):
+                continue
             # nero mangia bianco
-                if paw == 'b' and actual_state[1][neighbor] == 'w':
-                    super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
-                    if (super_neighbor[0] or super_neighbor[1]) not in range(9):
-                        continue
-                    if actual_state[1][super_neighbor] == 'b' or super_neighbor in (self.all_camps or self.castle):
-                        actual_state[1][neighbor] = 'e'
+            if paw == 'b' and actual_state[1][neighbor] == 'w':
+                super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
+                if super_neighbor[0] not in range(9) or super_neighbor[1] not in range(9):
+                    continue
+                if actual_state[1][super_neighbor] == 'b' or super_neighbor in self.all_camps or super_neighbor in self.castle:
+                    actual_state[1][neighbor] = 'e'
 
                 # nero mangia k
                 elif paw == 'b' and actual_state[1][neighbor] == 'k':
                     super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
-                    if (super_neighbor[0] or super_neighbor[1]) not in range(9):
+                    if super_neighbor[0] not in range(9) or super_neighbor[1] not in range(9):
                         continue
                     # non mangiato
                     if actual_state[1][super_neighbor] == 'w':
                         continue
-                    nears = [(neighbor[0] + direc[0], neighbor[1] + direc[1]) for direc in self.directions]
+                    nears = [(neighbor[0] + dire[0], neighbor[1] + dire[1]) for dire in self.directions]
                     # king in posizione generica
-                    if (actual_state[1][super_neighbor] == 'b' or super_neighbor in self.all_camps) and (neighbor not in self.castle and self.castle not in nears):
+                    if (actual_state[1][super_neighbor] == 'b' or super_neighbor in self.all_camps) and neighbor not in self.castle and self.castle not in nears:
                         return 'BW', actual_state[1]
                     # king nel castello
                     if neighbor in self.castle:
@@ -210,19 +211,19 @@ class Tablut(Game):
                 # bianco/re mangia nero
                 elif paw == ('w' or 'k') and actual_state[1][neighbor] == 'b':
                     super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
-                    if (super_neighbor[0] and super_neighbor[1]) in range(9):
-                        # non mangiato
-                        if actual_state[1][super_neighbor] == 'b':
-                            continue
-                        if actual_state[1][super_neighbor] == ('w' or 'k') or super_neighbor in (self.all_camps or self.castle):
-                            actual_state[1][neighbor] = 'e'
+                    if super_neighbor[0] not in range(9) or super_neighbor[1] not in range(9):
+                        continue
+                    # non mangiato
+                    if actual_state[1][super_neighbor] == 'b':
+                        continue
+                    if actual_state[1][super_neighbor] == 'w' or actual_state[1][super_neighbor] == 'k' or super_neighbor in self.all_camps or super_neighbor == self.castle:
+                        actual_state[1][neighbor] = 'e'
 
         # cambio turno
         if actual_state[0] == 'B':
             return 'W', actual_state[1]
         if actual_state[0] == 'W':
             return 'B', actual_state[1]
-
 
     # ritorna True quando la scacchiera è in una condizione di vittoria per uno dei due giocaotri
     def terminal_test(self, state):
