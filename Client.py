@@ -23,7 +23,7 @@ def main():
         exit(1)
 
     client = Client(host, port)
-    my_heuristic = tablut.white_evaluation_function
+    my_heuristic = tablut.Tablut.white_evaluation_function
     search = games.alphabeta_cutoff_search
 
     try:
