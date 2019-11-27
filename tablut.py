@@ -63,15 +63,15 @@ class Tablut(Game):
     # -struttura ((x,y),('sopra',1),'num2,num3,num4) or dictionary(key=(pos_X,pos_Y),value=[(pos_X_finale,pos_Y_finale),(..)...lista delle possibili posizioni finali..]
     # le azioni possibili le passiamo come un generatore
     def actions(self, state):
-
-        black_pos = tuple(zip(*np.where(state[1] == 'b')))  # all current black positions
-        white_pos = tuple(zip(*np.where(state[1] == 'w'))) + tuple(
-            zip(*np.where(state[1] == 'k')))  # all current white positions + king position
+        # all current black positions
+        black_pos = tuple(zip(*np.where(state[1] == 'b')))
+         # all current white positions + king position
+        white_pos = tuple(zip(*np.where(state[1] == 'w'))) + tuple(zip(*np.where(state[1] == 'k')))
         possible_actions = []
         invalid_tiles = white_pos + black_pos + self.castle  # tiles in which we can't go in or pass through apart for the camps
 
         # we check for which player i have to compute the possible moves
-        if any(state[0]) == 'B':  # if it's black's turn we check only the black positions
+        if state[0] == 'B':  # if it's black's turn we check only the black positions
             pos = black_pos
         else:
             pos = white_pos
@@ -82,18 +82,14 @@ class Tablut(Game):
                 invalid_tiles = invalid_tiles + self.all_camps  # add all camps as invalid positions
             else:  # if a checker is initially in a camp we add only the other camps as invalid positions
                 for i, camp_i in enumerate(self.camps):
-                    if elements in camp_i:
-                        for j in range(4):
-                            if j != i:
-                                invalid_tiles = invalid_tiles + self.camps[j]
-                        break  # once we find a checkers in a camp we don't check the other camps for it
-
+                    if elements not in camp_i:
+                        invalid_tiles = invalid_tiles + camp_i
             # for every direction
             for dire in self.directions:
-                checkers = (elements[0] + dire[0], elements[1] + dire[
-                    1])  # we compute the final position (checkers) incrementing of 1 in that direction
-                while checkers not in invalid_tiles:  # while we don't find an invalid position we go on incrementing
-                    possible_actions.append((elements, checkers))
+                # we compute the final position (checkers) incrementing of 1 in that direction
+                checkers = (elements[0] + dire[0], elements[1] + dire[1])
+                while checkers not in invalid_tiles and (checkers[0] and checkers[1]) in range(9):  # while we don't find an invalid position we go on incrementing
+                    possible_actions.append(elements+checkers)
                     checkers = (checkers[0] + dire[0], checkers[1] + dire[1])
         return tuple(possible_actions)
 
@@ -101,72 +97,76 @@ class Tablut(Game):
     ####### bisogna modificare il fatto che non mangia se schiaccio un bianco contro il castello e dentro c'è il re o
     ####### se schiaccio un nero contro il campo e dentro il campo c'è un nero
     def result(self, state, move):
-        state1 = copy.deepcopy(state)
-        white_pos = list(self.white)
-        black_pos = list(self.black)
-        if state1[0] == 'B':  # swap turn
-            state1[0] = 'W'
-            other, my = 'w', 'b'
-            black_pos.append(move[1])
-            black_pos.remove(move[0])
+        actual_state = copy.deepcopy(state)
+        paw = actual_state[1][move[0],move[1]]
+        actual_state[1][move[0],move[1]], actual_state[1][move[2],move[3]] = actual_state[1][move[2],move[3]], actual_state[1][move[0],move[1]]
 
-        else:
-            state1[0] = 'B'
-            other, my = 'b', 'w'
-            white_pos.append(move[1])
-            white_pos.remove(move[0])
+        #check king on win
+        if paw == 'k' and (move[2],move[3]) in self.winning:
+            return 'WW', actual_state[1]
 
-        state1[1][move[0]], state1[1][move[1]] = state1[1][move[1]], state1[1][
-            move[0]]  # swap the current position with an empty tile
-
+        #check mangiato/end
         for dire in self.directions:
-            neighbor = (move[1][0] + dire[0], move[1][1] + dire[1])
-            if state1[1][neighbor] == other:
+            neighbor = (move[2] + dire[0], move[3] + dire[1])
+            if (neighbor[0] or neighbor[1]) in range(9):
+                continue
+            #nero mangia bianco
+            if paw == 'b' and actual_state[1][neighbor]=='w':
                 super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
-                if state1[1][super_neighbor] == my or state1[1][super_neighbor] in self.all_camps or state1[1][super_neighbor] == self.castle:
-                    state1[1][neighbor] = 'e'
-                    if state1[0] == 'B':
-                        black_pos.remove(neighbor)
-                    else:
-                        white_pos.remove(neighbor)
-        self.black = tuple(black_pos)
-        self.white = tuple(white_pos)
-        current_checkers = (len(self.white), len(self.black))
-        if self.n_checkers == current_checkers:
-            self.previous_states.append(state1[1])
-        else:
-            self.previous_states = [state1[1]]
-            self.n_checkers = current_checkers
-        return state1
+                if (super_neighbor[0] or super_neighbor[1]) in range(9):
+                    continue
+                if actual_state[1][super_neighbor] == 'b' or super_neighbor in (self.all_camps or self.castle):
+                    actual_state[1][neighbor] = 'e'
+
+            #nero mangia k
+            elif paw == 'b' and actual_state[1][neighbor]=='k':
+                super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
+                if (super_neighbor[0] or super_neighbor[1]) in range(9):
+                    continue
+                #non mangiato
+                if actual_state[1][super_neighbor] == ('w' or 'e'):
+                    continue
+                nears = [(neighbor[0]+dir[0],neighbor[1]+dir[1]) for dir in self.directions]
+                #king in posizione generica
+                if (actual_state[1][super_neighbor] == 'b' or super_neighbor in self.all_camps) and neighbor not in self.castle and self.castle not in nears):
+                    return 'BW', actual_state[1]
+                #king nel castello
+                if neighbor in self.castle:
+                    for near in nears:
+                        if actual_state[1][near] != 'b':
+                            continue
+                        return 'BW', actual_state
+                if self.castle in nears:
+                    for near in nears:
+                        if actual_state[1][near] != 'b' and near not in self.castle:
+                            continue
+                        return 'BW', actual_state[1]
+
+
+            #bianco/re mangia nero
+            elif paw == ('w' or 'k') and actual_state[1][neighbor]=='b':
+                super_neighbor = (neighbor[0] + dire[0], neighbor[1] + dire[1])
+                #non mangiato
+                if super_neighbor == ('w' or 'e'):
+                    continue
+                if actual_state[1][super_neighbor] == ('w' or 'k')  or super_neighbor in (self.all_camps or self.castle):
+                    actual_state[1][neighbor] = 'e'
+
+
+        #cambio turno
+        if actual_state[0] == 'B':
+            return 'W', actual_state[1]
+        if actual_state[0] == 'W':
+            return 'B', actual_state[1]
+
+
 
     # ritorna True quando la scacchiera è in una condizione di vittoria per uno dei due giocaotri
-    def terminal_test(self, state, action):
-        k_pos = np.where(state[1] == 'k')
-        k_pos = tuple(zip(k_pos[0], k_pos[
-            1]))  # mi restituisce una tupla con dentro una tupla che sono la x e la y del king perchè se non metto tuple mi restituirebbe un zip object
-        k_pos = k_pos[0]
-        near = []
-        for dire in self.directions:
-            supp = (k_pos[0] + dire[0], k_pos[1] + dire[1])
-            near.append(supp)
-        if k_pos in self.winning:
+    def terminal_test(self, state):
+        if state[0] == 'BW' or state[0] == 'WW':
             return True
-        if k_pos in self.central_cross:
-            if ((state[1][k_pos[0] + 1, k_pos[1]] == 'b' or (k_pos + 1, k_pos[1]) == self.castle) \
-                    and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) \
-                    and (state[1][k_pos[0], k_pos[1] - 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) \
-                    and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or (k_pos[0] + 1, k_pos[1]) == self.castle) and state[0]=='W'):
-                if action[1] in near:
-                    return True
-        else:
-            if (state[1][k_pos[0] + 1, k_pos[1]] == 'b' or (k_pos[0] + 1, k_pos[1]) in self.all_camps) and (state[1][k_pos[0] - 1, k_pos[1]] == 'b' or (k_pos[0] - 1, k_pos[1]) in self.all_camps):
-                if action[1] == (k_pos[0] + 1, k_pos[1]) or action[1] == (k_pos[0] - 1, k_pos[1]):
-                    return True
-            if (state[1][k_pos[0], k_pos[1] - 1] == 'b' or (k_pos[0], k_pos[1] - 1) in self.all_camps) and (state[1][k_pos[0], k_pos[1] + 1] == 'b' or (k_pos[0], k_pos[1] + 1) in self.all_camps):
-                if action[1] == (k_pos[0], k_pos[1] + 1) or action[1] == (k_pos[0], k_pos[1] - 1):
-                    return True
-        if self.draw(state):
-            return True
+        #if self.draw(state):
+        #    return True
         return False
 
     # preso lo state ritorna quale gocatore deve muovere (questa info deve essere dentro lo state)
@@ -183,15 +183,16 @@ class Tablut(Game):
 
     # presa una condizione di vittoria e un giocatore ritorna un punteggio (?)
     def utility(self, state, player):
-        if self.draw(state):
-            return 0
-        elif state[0] == 'B' and player == 'W':
+        print('partita finita')
+        #if self.draw(state):
+        #    return 0
+        elif state[0] == 'BW' and player == 'W':
             return 1
-        elif state[0] == 'W' and player == 'W':
+        elif state[0] == 'WW' and player == 'W':
             return -1
-        elif state[0] == 'W' and player == 'B':
+        elif state[0] == 'BW' and player == 'B':
             return 1
-        elif state[0] == 'B' and player == 'B':
+        elif state[0] == 'WW' and player == 'B':
             return -1
 
     # trasforma il result in una striga json da mandare al server
