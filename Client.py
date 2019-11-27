@@ -23,7 +23,7 @@ def main():
         exit(1)
 
     client = Client(host, port)
-    my_heuristic = tablut.Tablut.white_evaluation_function
+    my_heuristic = tablut.Tablut().white_evaluation_function
     search = games.alphabeta_cutoff_search
 
     try:
@@ -91,5 +91,6 @@ class Client:
 
     def close(self):
         self.sock.close()
+
 
 if __name__ == '__main__': main()
