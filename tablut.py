@@ -325,7 +325,7 @@ class Tablut(Game):
         black = tuple(zip(black[0], black[1]))
         count = 0
         for i in range((len(black))-1):
-            for j in range(i+1, (len(black)) - 1):
+            for j in range(i+1, len(black)):
                 if (black[i][0] == black[j][0] + 1 or black[i][0] == black[j][0] - 1) and (black[i][1] == black[j][1] + 1 or black[i][1] == black[j][1] - 1):
                     count += 1
         print('controllo neri in diagonale: ',count)
@@ -365,9 +365,9 @@ class Tablut(Game):
                         for dir1 in self.directions:
                             if dir1 != dire:
                                 new_pos1 = (new_pos[0], new_pos[1])
-                                while state[1][new_pos1] == 'e' and new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8:
-                                    new_pos1 = (new_pos1[0] + dire[0], new_pos1[1] + dire[1])
-                                if state[1][new_pos1] == 'b' and new_pos1 != new_pos:
+                                while new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8 and state[1][new_pos1] == 'e':
+                                    new_pos1 = (new_pos1[0] + dir1[0], new_pos1[1] + dir1[1])
+                                if 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8 and state[1][new_pos1] == 'b' and new_pos1 != new_pos:
                                     print('il re è minacciato')
                                     return True
         print('il re non è minacciato')
@@ -389,9 +389,9 @@ class Tablut(Game):
                             for dir1 in self.directions:
                                 if dir1 != dire:
                                     new_pos1 = (new_pos[0], new_pos[1])
-                                    while state[1][new_pos1] == 'e' and new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8:
-                                        new_pos1 = (new_pos1[0] + dire[0], new_pos1[1] + dire[1])
-                                    if state[1][new_pos1] == 'b' and new_pos1 != new_pos:
+                                    while new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8 and state[1][new_pos1] == 'e':
+                                        new_pos1 = (new_pos1[0] + dir1[0], new_pos1[1] + dir1[1])
+                                    if 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8 and state[1][new_pos1] == 'b' and new_pos1 != new_pos:
                                         count += 1
         print('il numero di bianchi minacciati è: ',count)
         return count
@@ -413,10 +413,9 @@ class Tablut(Game):
                             for dir1 in self.directions:
                                 if dir1 != dire:
                                     new_pos1 = (new_pos[0], new_pos[1])
-                                    while state[1][new_pos1] == 'e' and new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8:
-                                        new_pos1 = (new_pos1[0] + dire[0], new_pos1[1] + dire[1])
-
-                                    if state[1][new_pos1] == 'w' and new_pos1 != new_pos:
+                                    while new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8 and state[1][new_pos1] == 'e':
+                                        new_pos1 = (new_pos1[0] + dir1[0], new_pos1[1] + dir1[1])
+                                    if 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8 and state[1][new_pos1] == 'w' and new_pos1 != new_pos:
                                         count += 1
         print('il numero di neri minacciati è: ',count)
         return count
@@ -529,13 +528,13 @@ class Tablut(Game):
 
     def n_white_in_angle(self, state):
         n_white = 0
-        if state[1][0,0] == 'w':
+        if state[1][0, 0] == 'w':
             n_white += 1
-        if state[1][8,0] == 'w':
+        if state[1][8, 0] == 'w':
             n_white += 1
-        if state[1][0,8] == 'w':
+        if state[1][0, 8] == 'w':
             n_white += 1
-        if state[1][8,8] == 'w':
+        if state[1][8, 8] == 'w':
             n_white += 1
         print('numero di bianchi negli angoli: ',n_white)
         return n_white
