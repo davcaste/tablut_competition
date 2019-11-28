@@ -80,7 +80,7 @@ class Tablut(Game):
 
         # for every initial position (elements)
         for elements in pos:
-            invalid_tiles = white_pos + black_pos + self.castle  # tiles in which we can't go in or pass through apart for the camps
+            invalid_tiles = white_pos + black_pos + (self.castle,)  # tiles in which we can't go in or pass through apart for the camps
             if elements not in self.all_camps:
                 invalid_tiles = invalid_tiles + self.all_camps  # add all camps as invalid positions
             else:  # if a checker is initially in a camp we add only the other camps as invalid positions
@@ -276,7 +276,7 @@ class Tablut(Game):
         for dire in self.directions:
             if 0 <= k_pos[0]+dire[0] <= 8 and 0 <= k_pos[1] + dire[1] <= 8:
                 k_pos = (k_pos[0]+dire[0],k_pos[1]+dire[1])
-                while state[1][k_pos] == 'e' and (k_pos[0] <= 8 and k_pos[0] >= 0) and (k_pos[1] <= 8 and k_pos[1] >= 0) and k_pos not in self.all_camps and k_pos != self.castle:
+                while (8 >= k_pos[0] >= 0) and (8 >= k_pos[1] >= 0) and state[1][k_pos] == 'e' and k_pos not in self.all_camps and k_pos != self.castle:
                     k_pos = (k_pos[0]+dire[0], k_pos[1]+dire[1])
                 if (k_pos[0] == 0 or k_pos[0] == 8 or k_pos[1] == 0 or k_pos[1] == 8) and state[1][k_pos[0], k_pos[1] == 'e' and k_pos not in self.all_camps]:  # metto questo if perchè io potrei essere uscito nell'ultima cella sia perchè ho trovato una pedina\campo sia perche ho finito la scacchiera
                     check += 1
@@ -293,12 +293,12 @@ class Tablut(Game):
         count = 0
         for i in range(9):
             for j in range(9):
-                if (state[1][i,j] == 'e' or state[1][i,j] == 'k') and (i, j) not in self.all_camps and (i, j) not in self.castle:
+                if (state[1][i,j] == 'e' or state[1][i,j] == 'k') and (i, j) not in self.all_camps and (i, j) != self.castle:
                     check_r += 1
-                if (state[1][j,i] == 'e' or state[1][i,j] == 'k') and (j, i) not in self.all_camps and (j,  i) not in self.castle:
+                if (state[1][j,i] == 'e' or state[1][i,j] == 'k') and (j, i) not in self.all_camps and (j,  i) != self.castle:
                     check_c += 1
             if check_r == 9:
-                count =1
+                count += 1
             if check_c == 9:
                 count += 1
         print('controllo linee libere: ', count)
@@ -310,7 +310,7 @@ class Tablut(Game):
         k_pos = np.where(state[1] == 'k')
         k_pos = tuple(zip(k_pos[0], k_pos[1]))
         k_pos = k_pos[0]
-        n_black=0
+        n_black = 0
         for dire in self.directions:
             if 0 <= k_pos[0] + dire[0] <= 8 and 0 <= k_pos[1] + dire[1] <= 8:
                 if state[1][k_pos[0]+dire[0], k_pos[1]+dire[1]] == 'b':
@@ -350,21 +350,26 @@ class Tablut(Game):
         return n_white
 
 
-    # Ritorna True se il re è minacciato
+    # Ritorna True se il re è minacciato ----> modificare da qui in giu
     def king_threat(self, state):
         k_pos = np.where(state[1] == 'k')
         k_pos = tuple(zip(k_pos[0], k_pos[1]))
         k_pos = k_pos[0]
         print('controllo se il re è minacciato:')
         for dire in self.directions:
-            if 0 <= k_pos[0] + dire[0] <= 8 and 0 <= k_pos[1] + dire[1] <= 8:
-                new_pos = (k_pos[0] + dire[0], k_pos[1] + dire[1])
+            new_pos = (k_pos[0] + dire[0], k_pos[1] + dire[1])
+            if 0 <= new_pos[0] <= 8 and 0 <= new_pos[1] <= 8:
                 if state[1][new_pos] == 'b' or new_pos in self.all_camps:
-                    while state[1][new_pos] == 'e' or new_pos not in self.castle or new_pos not in self.all_camps or new_pos[0] != 8 or new_pos[0] != 0 or new_pos[1] != 0 or new_pos[1] != 8:
-                        new_pos = (new_pos[0] + dire[0], new_pos[1] + dire[1])
-                        if state[1][new_pos] == 'b':
-                            print('il re è minacciato')
-                            return True
+                    new_pos = (k_pos[0] - 2*dire[0], k_pos[1] - 2*dire[1])
+                    if 0 <= new_pos[0] <= 8 and 0 <= new_pos[1] <= 8:
+                        for dir1 in self.directions:
+                            if dir1 != dire:
+                                new_pos1 = (new_pos[0], new_pos[1])
+                                while state[1][new_pos1] == 'e' and new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8:
+                                    new_pos1 = (new_pos1[0] + dire[0], new_pos1[1] + dire[1])
+                                if state[1][new_pos1] == 'b' and new_pos1 != new_pos:
+                                    print('il re è minacciato')
+                                    return True
         print('il re non è minacciato')
         return False
 
@@ -376,13 +381,18 @@ class Tablut(Game):
         count = 0
         for white in white_pos:
             for dire in self.directions:
-                if 0 <= white[0] + dire[0] <= 8 and 0 <= white[1] + dire[1] <= 8:
-                    new_pos = (white[0] + dire[0], white[1] + dire[1])
-                    if state[1][new_pos] == 'b' or new_pos in self.all_camps:
-                        while state[1][new_pos] == 'e' and new_pos not in self.castle and new_pos not in self.all_camps and (new_pos[0] <= 8 and new_pos[0] >= 0) and (new_pos[1] >= 0 and new_pos[1] <= 8):
-                            new_pos = (new_pos[0] + dire[0], new_pos[1] + dire[1])
-                            if state[1][new_pos] == 'b':
-                                count += 1
+                new_pos = (white[0] + dire[0], white[1] + dire[1])
+                if 0 <= new_pos[0] <= 8 and 0 <= new_pos[1] <= 8:
+                    if state[1][new_pos] == 'b' or new_pos in self.all_camps or new_pos == self.castle:
+                        new_pos = (white[0] - 2 * dire[0], white[1] - 2 * dire[1])
+                        if 0 <= new_pos[0] <= 8 and 0 <= new_pos[1] <= 8:
+                            for dir1 in self.directions:
+                                if dir1 != dire:
+                                    new_pos1 = (new_pos[0], new_pos[1])
+                                    while state[1][new_pos1] == 'e' and new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8:
+                                        new_pos1 = (new_pos1[0] + dire[0], new_pos1[1] + dire[1])
+                                    if state[1][new_pos1] == 'b' and new_pos1 != new_pos:
+                                        count += 1
         print('il numero di bianchi minacciati è: ',count)
         return count
 
@@ -395,13 +405,19 @@ class Tablut(Game):
         print('dentro a black treat')
         for black in black_pos:
             for dire in self.directions:
-                if 0 <= black[0] + dire[0] <= 8 and 0 <= black[1] + dire[1] <= 8:
-                    new_pos = (black[0] + dire[0], black[1] + dire[1])
-                    if new_pos[0] >= 0 and new_pos[0] <= 8 and new_pos[1] <= 8 and new_pos[1] >= 0:
-                        while state[1][new_pos] == 'e' and new_pos not in self.castle and new_pos not in self.all_camps and (new_pos[0] < 8 and new_pos[0] > 0) and (new_pos[1] > 0 and new_pos[1] < 8):
-                            new_pos = (new_pos[0] + dire[0], new_pos[1] + dire[1])
-                            if state[1][new_pos] == 'w' or state[1][new_pos] == 'k':
-                                count += 1
+                new_pos = (black[0] + dire[0], black[1] + dire[1])
+                if 0 <= new_pos[0] <= 8 and 0 <= new_pos[1] <= 8:
+                    if state[1][new_pos] == 'w' or new_pos in self.all_camps or new_pos == self.castle:
+                        new_pos = (black[0] - 2 * dire[0], black[1] - 2 * dire[1])
+                        if 0 <= new_pos[0] <= 8 and 0 <= new_pos[1] <= 8:
+                            for dir1 in self.directions:
+                                if dir1 != dire:
+                                    new_pos1 = (new_pos[0], new_pos[1])
+                                    while state[1][new_pos1] == 'e' and new_pos1 not in self.castle and new_pos1 not in self.all_camps and 0 <= new_pos1[0] <= 8 and 0 <= new_pos1[1] <= 8:
+                                        new_pos1 = (new_pos1[0] + dire[0], new_pos1[1] + dire[1])
+
+                                    if state[1][new_pos1] == 'w' and new_pos1 != new_pos:
+                                        count += 1
         print('il numero di neri minacciati è: ',count)
         return count
 
@@ -508,6 +524,8 @@ class Tablut(Game):
             n_black = len(black_pos)
         print('numero di neri nei 2 quadranti vicini al re se il re è nella croce centrale: ', n_black)
         return n_black
+
+    ## aggiungere funzione che mi conta quanti bianchi ci sono in ogni quadrante (o il quadrante con più bianchi)
 
     def n_white_in_angle(self, state):
         n_white = 0
