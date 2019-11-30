@@ -1,4 +1,4 @@
-'''TCP Client'''
+'''Client'''
 
 import games
 import tablut
@@ -6,6 +6,7 @@ import socket
 import json
 import numpy as np
 import sys
+
 
 def main():
     if len(sys.argv) != 3:
@@ -36,8 +37,9 @@ def main():
         # game loop:
         while True:
             if color == turn:
-                move = search((turn, state_np), tablut.Tablut(), d=2, cutoff_test=None, eval_fn=my_heuristic)
+                move = search((turn, state_np), tablut.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
                 if move != None:
+                    print(move)
                     client.send_move(move)
             turn, state_np = client.recv_state()
             print (state_np, turn)
@@ -62,8 +64,8 @@ class Client:
 
     def send_move(self, move):
         move_obj = {
-            "from": chr(97 + move[0][1]) + str(move[0][0]+1),
-            "to": chr(97 + move[1][1]) + str(move[1][0]+1)
+            "from": chr(97 + move[1]) + str(move[0]+1),
+            "to": chr(97 + move[3]) + str(move[2]+1)
         }
 
         encoded = json.dumps(move_obj).encode("UTF-8")
