@@ -586,6 +586,8 @@ class Tablut(Game):
         w16 = self.n_white_in_victory_near_white(state) * weights[15]
         weights_white = [w1 ,w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16]
         return sum(weights_white)
+
+'''
 print ('inizio')
 heur = Tablut().white_evaluation_function
 print('ho l euristica')
@@ -600,7 +602,7 @@ init_state = ('W', np.array([['e', 'e', 'e', 'b', 'b', 'b', 'e', 'e', 'e'],
                                              ['e', 'e', 'e', 'b', 'b', 'b', 'e', 'e', 'e']]))
 print('inizio la ricerca')
 search = games.alphabeta_cutoff_search(init_state, Tablut(), eval_fn=heur)
-
+'''
 '''self.initial_state = ('W', np.array([['e', 'e', 'e', 'b', 'b', 'b', 'e', 'e', 'e'],
                                              ['e', 'e', 'e', 'e', 'b', 'e', 'e', 'e', 'e'],
                                              ['e', 'e', 'e', 'e', 'w', 'e', 'e', 'e', 'e'],
