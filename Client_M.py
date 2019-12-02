@@ -45,7 +45,7 @@ def main():
 
         # wait init state
         turn, state_np = client.recv_state()
-        print(turn, state_np)
+        print(state_np, turn, "INITIAL STATE")
 
         # game loop:
         while True:
@@ -57,6 +57,7 @@ def main():
                 # MultiProcessing implementation
                 processes = [mp.Process(target=actual, args=[act, i+1, search, turn, state_np, my_heuristic]) for i in range(2)]
                 [process.start() for process in processes]
+                print(state_np, "CHECK")
 
                 while not stop_flag:
                     if not act.empty():
@@ -74,7 +75,7 @@ def main():
                 # move = search((turn, state_np), tablut.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
 
             turn, state_np = client.recv_state()
-            print (state_np, turn)
+            print (state_np, turn, "FINE TURNO")
 
     finally:
         print('closing socket')
