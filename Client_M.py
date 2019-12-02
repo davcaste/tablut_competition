@@ -1,6 +1,6 @@
 '''Client'''
 
-import games
+import my_games
 import tablut
 import socket
 import json
@@ -36,7 +36,7 @@ def main():
 
     client = Client(host, port)
     my_heuristic = tablut.Tablut().white_evaluation_function
-    search = games.alphabeta_cutoff_search
+    search = my_games.alphabeta_cutoff_search
 
     try:
         # present name
