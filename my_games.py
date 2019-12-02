@@ -21,8 +21,6 @@ def alphabeta_cutoff_search(state, game, d=4, cutoff_test=None, eval_fn=None, pa
             if v >= beta:
                 return v
             alpha = max(alpha, v)
-            if Client_T.stop_flag:
-                break
         return v
 
     def min_value(state, alpha, beta, depth):
@@ -35,8 +33,6 @@ def alphabeta_cutoff_search(state, game, d=4, cutoff_test=None, eval_fn=None, pa
             if v <= alpha:
                 return v
             beta = min(beta, v)
-            if Client_T.stop_flag:
-                break
         return v
 
     # Body of alphabeta_cutoff_search starts here:
@@ -60,6 +56,4 @@ def alphabeta_cutoff_search(state, game, d=4, cutoff_test=None, eval_fn=None, pa
         if v > best_score:
             best_score = v
             best_action = a
-        if Client_T.stop_flag:
-            break
     return best_action, best_score      # BEST_SCORES returned with best_action

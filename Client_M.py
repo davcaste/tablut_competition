@@ -49,7 +49,7 @@ def main():
         while True:
             if color == turn:
                 # Timer used to not exceed the timeout
-                tim = t.Timer(55.0, function=timer, args=[client, lock])
+                tim = t.Timer(30.0, function=timer, args=[client, lock])
                 tim.start()
                 # MultiProcessing implementation
                 processes = [mp.Process(target=actual, args=[lock, i-1, search, turn, state_np, my_heuristic]) for i in range(2)]
@@ -124,6 +124,7 @@ def timer(client, lock):
     global move, stop_flag
 
     lock.acquire()
+    print(move)
     if move != None:
         client.send_move(move)
     lock.release()
