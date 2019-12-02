@@ -1,7 +1,7 @@
 '''Client'''
 
 import my_games
-import tablut
+import tablut_noPrint
 import socket
 import json
 import numpy as np
@@ -36,7 +36,7 @@ def main():
     lock = t.Lock()     # lock needed to acces critical section (global move)
 
     client = Client(host, port)
-    my_heuristic = tablut.Tablut().white_evaluation_function
+    my_heuristic = tablut_noPrint.Tablut().white_evaluation_function
     search = my_games.alphabeta_cutoff_search   # NB: my_games (not games)
 
     try:
@@ -150,8 +150,8 @@ def actual(act, part, search, turn, state_np, my_heuristic):
     '''
     for depth in range(1, 10):
         # NB: TWO (not one) VALUES RETURNED FROM SEARCH
-        action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
-                               part=part)
+        action, our_value = search((turn, state_np), tablut_noPrint.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
+                                   part=part)
 
         act.put((action, our_value))
 
