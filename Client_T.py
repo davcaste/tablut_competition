@@ -10,10 +10,11 @@ import threading as t
 
 move = None
 m_value = - float('inf')
+stop_flag = False
 
 
 def main():
-    global move     # shared variables
+    global move, stop_flag     # shared variables
 
     if len(sys.argv) != 3:
         exit(1)
@@ -57,6 +58,12 @@ def main():
 
             turn, state_np = client.recv_state()
             print (state_np, turn)
+
+            if stop_flag:
+                time.join()
+                t1.join()
+                t2.join()
+                stop_flag = False
 
     finally:
         print('closing socket')
@@ -113,7 +120,7 @@ def t_handler(lock, part, search, turn, state_np, my_heuristic):
     '''
     Function used to search in a specific subdomain of possible actions
     '''
-    global move, m_value
+    global move, m_value, stop_flag
     for depth in range(1, 10):
         # NB: TWO (not one) VALUES RETURNED FROM SEARCH
         action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
@@ -124,12 +131,19 @@ def t_handler(lock, part, search, turn, state_np, my_heuristic):
             m_value = our_value
         lock.release()
 
+        if stop_flag:
+            break
+
 
 def timer(client, lock):
     '''
     Function used to handle the timing contraints to produce an action
     '''
     global move
+    global stop_flag
+
+    stop_flag = True
+    
     lock.acquire()
     if move != None:
         client.send_move(move)
