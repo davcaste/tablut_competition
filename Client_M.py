@@ -65,6 +65,9 @@ def main():
                             move = action
                             m_value = our_value
 
+                if stop_flag:
+                    stop_flag = False
+
                 [process.terminate() for process in processes]
                 tim.join()
 
