@@ -11,10 +11,11 @@ import threading as t
 move = None
 m_value = - float('inf')
 stop_flag = False
+done_flags = [False, False]
 
 
 def main():
-    global move, stop_flag     # shared variables
+    global move, stop_flag, done_flags     # shared variables
 
     if len(sys.argv) != 3:
         exit(1)
@@ -51,6 +52,13 @@ def main():
 
         # game loop:
         while True:
+            if stop_flag and np.all(done_flags):
+                time.join()
+                t1.join()
+                t2.join()
+                stop_flag = False
+                done_flags = [False, False]
+
             if color == turn:
                 time.start()    # after 55 SECONDS it will send the best move until there
                 t1.start()      # compute the best move in half of the tree
@@ -58,12 +66,6 @@ def main():
 
             turn, state_np = client.recv_state()
             print (state_np, turn)
-
-            if stop_flag:
-                time.join()
-                t1.join()
-                t2.join()
-                stop_flag = False
 
     finally:
         print('closing socket')
@@ -120,7 +122,7 @@ def t_handler(lock, part, search, turn, state_np, my_heuristic):
     '''
     Function used to search in a specific subdomain of possible actions
     '''
-    global move, m_value, stop_flag
+    global move, m_value, stop_flag, done_flags
     for depth in range(1, 10):
         # NB: TWO (not one) VALUES RETURNED FROM SEARCH
         action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
@@ -134,6 +136,8 @@ def t_handler(lock, part, search, turn, state_np, my_heuristic):
         if stop_flag:
             break
 
+    done_flags[part-1] = True
+
 
 def timer(client, lock):
     '''
@@ -143,7 +147,7 @@ def timer(client, lock):
     global stop_flag
 
     stop_flag = True
-    
+
     lock.acquire()
     if move != None:
         client.send_move(move)
