@@ -7,6 +7,7 @@ import json
 import numpy as np
 import sys
 import threading as t
+import time
 
 move = None
 m_value = - float('inf')
@@ -17,7 +18,7 @@ done_flags = [False, False]
 def main():
     global move, stop_flag, done_flags     # shared variables
     started = False
-    
+
     if len(sys.argv) != 3:
         exit(1)
 
@@ -48,25 +49,19 @@ def main():
 
         # game loop:
         while True:
-            if stop_flag and np.all(done_flags):
-                time.join()
+            if color == turn:
+                tim = t.Timer(55.0, function=timer, args=[client, lock])
+                tim.start()    # after 55 SECONDS it will send the best move until there
+
+                t1 = t.Thread(target=t_handler, args=[lock, 1, search, turn, state_np, my_heuristic])
+                t2 = t.Thread(target=t_handler, args=[lock, 2, search, turn, state_np, my_heuristic])
+
+                t1.start()      # compute the best move in half of the tree
+                t2.start()      # compute the best move in other half of the tree
+
+                tim.join()
                 t1.join()
                 t2.join()
-                stop_flag = False
-                done_flags = [False, False]
-
-            if color == turn:
-                if not started:
-                    time = t.Timer(55.0, function=timer, args=[client, lock])
-                    time.start()    # after 55 SECONDS it will send the best move until there
-
-                    t1 = t.Thread(target=t_handler, args=[lock, 1, search, turn, state_np, my_heuristic])
-                    t2 = t.Thread(target=t_handler, args=[lock, 2, search, turn, state_np, my_heuristic])
-
-                    t1.start()      # compute the best move in half of the tree
-                    t2.start()      # compute the best move in other half of the tree
-
-                    started = True
 
             turn, state_np = client.recv_state()
             print (state_np, turn)
@@ -126,7 +121,7 @@ def t_handler(lock, part, search, turn, state_np, my_heuristic):
     '''
     Function used to search in a specific subdomain of possible actions
     '''
-    global move, m_value, stop_flag, done_flags
+    global move, m_value, stop_flag
     for depth in range(1, 10):
         # NB: TWO (not one) VALUES RETURNED FROM SEARCH
         action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
@@ -139,8 +134,6 @@ def t_handler(lock, part, search, turn, state_np, my_heuristic):
 
         if stop_flag:
             break
-
-    done_flags[part-1] = True
 
 
 def timer(client, lock):
@@ -156,6 +149,8 @@ def timer(client, lock):
     if move != None:
         client.send_move(move)
     lock.release()
+
+    time.sleep(1)
 
 
 if __name__ == '__main__': main()
