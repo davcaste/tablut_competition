@@ -12,12 +12,10 @@ import time
 move = None
 m_value = - float('inf')
 stop_flag = False
-done_flags = [False, False]
 
 
 def main():
-    global move, stop_flag, done_flags     # shared variables
-    started = False
+    global move, stop_flag    # shared variables
 
     if len(sys.argv) != 3:
         exit(1)
