@@ -16,7 +16,7 @@ stop_flag = False
 
 
 def main():
-    global stop_flag
+    global move, stop_flag      # shared variables
 
     if len(sys.argv) != 3:
         exit(1)
@@ -36,11 +36,12 @@ def main():
 
     client = Client(host, port)
     my_heuristic = tablut.Tablut().white_evaluation_function
-    search = my_games.alphabeta_cutoff_search
+    search = my_games.alphabeta_cutoff_search   # NB: my_games (not games)
 
     try:
         # present name
         client.send_name("Capitano")
+
         # wait init state
         turn, state_np = client.recv_state()
         print(turn, state_np)
@@ -51,8 +52,9 @@ def main():
                 # Timer used to not exceed the timeout
                 tim = t.Timer(30.0, function=timer, args=[client, lock])
                 tim.start()
+                
                 # MultiProcessing implementation
-                processes = [mp.Process(target=actual, args=[lock, i-1, search, turn, state_np, my_heuristic]) for i in range(2)]
+                processes = [mp.Process(target=actual, args=[lock, i+1, search, turn, state_np, my_heuristic]) for i in range(2)]
                 [process.start() for process in processes]
 
                 while not stop_flag:
