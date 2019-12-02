@@ -6,10 +6,18 @@ import socket
 import json
 import numpy as np
 import sys
+import threading as t
 import multiprocessing as mp
+import time
+
+move = None
+m_value = - float('inf')
+stop_flag = False
 
 
 def main():
+    global stop_flag
+
     if len(sys.argv) != 3:
         exit(1)
 
@@ -23,6 +31,8 @@ def main():
         port = 5801
     else:
         exit(1)
+
+    lock = t.Lock()     # lock needed to acces critical section (global move)
 
     client = Client(host, port)
     my_heuristic = tablut.Tablut().white_evaluation_function
@@ -38,10 +48,21 @@ def main():
         # game loop:
         while True:
             if color == turn:
-                move = search((turn, state_np), tablut.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
-                if move != None:
-                    print(move)
-                    client.send_move(move)
+                # Timer used to not exceed the timeout
+                tim = t.Timer(55.0, function=timer, args=[client, lock])
+                tim.start()
+                # MultiProcessing implementation
+                processes = [mp.Process(target=actual, args=[lock, i-1, search, turn, state_np, my_heuristic]) for i in range(2)]
+                [process.start() for process in processes]
+
+                while not stop_flag:
+                    pass
+
+                [process.terminate() for process in processes]
+                tim.join()
+
+                # move = search((turn, state_np), tablut.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
+
             turn, state_np = client.recv_state()
             print (state_np, turn)
 
@@ -94,6 +115,36 @@ class Client:
 
     def close(self):
         self.sock.close()
+
+
+def timer(client, lock):
+    '''
+    Function used to handle the timing contraints to produce an action
+    '''
+    global move, stop_flag
+
+    lock.acquire()
+    if move != None:
+        client.send_move(move)
+    lock.release()
+
+    stop_flag = True
+
+
+def actual(lock, part, search, turn, state_np, my_heuristic):
+    '''
+    Function used to search in a specific subdomain of possible actions
+    '''
+    global move, m_value
+    for depth in range(1, 10):
+        # NB: TWO (not one) VALUES RETURNED FROM SEARCH
+        action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
+                               part=part)
+        lock.acquire()
+        if our_value > m_value:
+            move = action
+            m_value = our_value
+        lock.release()
 
 
 if __name__ == '__main__': main()
