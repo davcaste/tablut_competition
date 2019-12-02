@@ -16,7 +16,8 @@ done_flags = [False, False]
 
 def main():
     global move, stop_flag, done_flags     # shared variables
-
+    started = False
+    
     if len(sys.argv) != 3:
         exit(1)
 
@@ -37,8 +38,6 @@ def main():
     my_heuristic = tablut.Tablut().white_evaluation_function
     search = my_games.alphabeta_cutoff_search   # NB: my_games (not games)
 
-    time = t.Timer(55.0, function=timer, args=[client, lock])
-
     try:
         # present name
         client.send_name("Capitano")
@@ -46,9 +45,6 @@ def main():
         # wait init state
         turn, state_np = client.recv_state()
         print(turn, state_np)
-
-        t1 = t.Thread(target=t_handler, args=[lock, 1, search, turn, state_np, my_heuristic])
-        t2 = t.Thread(target=t_handler, args=[lock, 2, search, turn, state_np, my_heuristic])
 
         # game loop:
         while True:
@@ -60,9 +56,17 @@ def main():
                 done_flags = [False, False]
 
             if color == turn:
-                time.start()    # after 55 SECONDS it will send the best move until there
-                t1.start()      # compute the best move in half of the tree
-                t2.start()      # compute the best move in other half of the tree
+                if not started:
+                    time = t.Timer(55.0, function=timer, args=[client, lock])
+                    time.start()    # after 55 SECONDS it will send the best move until there
+
+                    t1 = t.Thread(target=t_handler, args=[lock, 1, search, turn, state_np, my_heuristic])
+                    t2 = t.Thread(target=t_handler, args=[lock, 2, search, turn, state_np, my_heuristic])
+
+                    t1.start()      # compute the best move in half of the tree
+                    t2.start()      # compute the best move in other half of the tree
+
+                    started = True
 
             turn, state_np = client.recv_state()
             print (state_np, turn)
