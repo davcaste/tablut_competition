@@ -124,7 +124,7 @@ def timer(client, lock):
     global move, stop_flag
 
     lock.acquire()
-    print(move)
+    print("----------------------->",move)
     if move != None:
         client.send_move(move)
     lock.release()
@@ -142,6 +142,7 @@ def actual(lock, part, search, turn, state_np, my_heuristic):
         action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
                                part=part)
         lock.acquire()
+        print ("--------------", our_value, m_value, "--------------")
         if our_value > m_value:
             move = action
             m_value = our_value
