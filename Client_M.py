@@ -12,7 +12,7 @@ import time
 
 move = None
 m_value = - float('inf')
-stop_flag = False               # queue used to verify the timer expired
+stop_flag = False
 
 
 def main():
@@ -67,6 +67,8 @@ def main():
                             m_value = our_value
 
                 if stop_flag:
+                    move = None
+                    m_value = - float('inf')
                     stop_flag = False
 
                 [process.terminate() for process in processes]
