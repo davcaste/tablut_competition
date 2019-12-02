@@ -12,11 +12,12 @@ import time
 
 move = None
 m_value = - float('inf')
-stop_flag = False
+stop_flag = False               # queue used to verify the timer expired
 
 
 def main():
-    global move, stop_flag      # shared variables
+    global move, m_value, stop_flag      # shared variables
+    act = mp.Queue()            # queue where we save the best intermediate move
 
     if len(sys.argv) != 3:
         exit(1)
@@ -52,13 +53,17 @@ def main():
                 # Timer used to not exceed the timeout
                 tim = t.Timer(30.0, function=timer, args=[client, lock])
                 tim.start()
-                
+
                 # MultiProcessing implementation
-                processes = [mp.Process(target=actual, args=[lock, i+1, search, turn, state_np, my_heuristic]) for i in range(2)]
+                processes = [mp.Process(target=actual, args=[act, i+1, search, turn, state_np, my_heuristic]) for i in range(2)]
                 [process.start() for process in processes]
 
                 while not stop_flag:
-                    pass
+                    if not act.empty():
+                        action, our_value = act.get()
+                        if our_value > m_value:
+                            move = action
+                            m_value = our_value
 
                 [process.terminate() for process in processes]
                 tim.join()
@@ -121,34 +126,31 @@ class Client:
 
 def timer(client, lock):
     '''
+    Handler of TIMER THREAD
     Function used to handle the timing contraints to produce an action
     '''
     global move, stop_flag
 
     lock.acquire()
-    print("----------------------->",move)
-    if move != None:
+    print("----------------------->", move)
+    if move is not None:
         client.send_move(move)
     lock.release()
 
     stop_flag = True
 
 
-def actual(lock, part, search, turn, state_np, my_heuristic):
+def actual(act, part, search, turn, state_np, my_heuristic):
     '''
+    Handler of PROCESSES
     Function used to search in a specific subdomain of possible actions
     '''
-    global move, m_value
     for depth in range(1, 10):
         # NB: TWO (not one) VALUES RETURNED FROM SEARCH
         action, our_value = search((turn, state_np), tablut.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
                                part=part)
-        lock.acquire()
-        print ("--------------", our_value, m_value, "--------------")
-        if our_value > m_value:
-            move = action
-            m_value = our_value
-        lock.release()
+
+        act.put((action, our_value))
 
 
 if __name__ == '__main__': main()
