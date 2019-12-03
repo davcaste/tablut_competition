@@ -1,4 +1,4 @@
-'''TCP Client'''
+'''Client'''
 
 import my_games
 import tablut_noPrint
@@ -7,6 +7,7 @@ import json
 import numpy as np
 import sys
 import threading as t
+import multiprocessing as mp
 import time
 
 move = None
@@ -15,7 +16,8 @@ stop_flag = False
 
 
 def main():
-    global move, stop_flag    # shared variables
+    global move, m_value, stop_flag      # shared variables
+    act = mp.Queue()            # queue where we save the best intermediate move
 
     if len(sys.argv) != 3:
         exit(1)
@@ -43,26 +45,39 @@ def main():
 
         # wait init state
         turn, state_np = client.recv_state()
-        print(turn, state_np)
+        print(state_np, turn, "INITIAL STATE")
 
         # game loop:
         while True:
             if color == turn:
-                tim = t.Timer(55.0, function=timer, args=[client, lock])
-                tim.start()    # after 55 SECONDS it will send the best move until there
+                # Timer used to not exceed the timeout
+                tim = t.Timer(30.0, function=timer, args=[client, lock])
+                tim.start()
 
-                t1 = t.Thread(target=t_handler, args=[lock, 1, search, turn, state_np, my_heuristic])
-                t2 = t.Thread(target=t_handler, args=[lock, 2, search, turn, state_np, my_heuristic])
+                # MultiProcessing implementation
+                processes = [mp.Process(target=actual, args=[act, i+1, search, turn, state_np, my_heuristic]) for i in range(2)]
+                [process.start() for process in processes]
+                print(state_np, "CHECK")
 
-                t1.start()      # compute the best move in half of the tree
-                t2.start()      # compute the best move in other half of the tree
+                while not stop_flag:
+                    if not act.empty():
+                        action, our_value = act.get()
+                        if our_value > m_value:
+                            move = action
+                            m_value = our_value
 
+                if stop_flag:
+                    move = None
+                    m_value = - float('inf')
+                    stop_flag = False
+
+                [process.terminate() for process in processes]
                 tim.join()
-                t1.join()
-                t2.join()
+
+                # move = search((turn, state_np), tablut.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
 
             turn, state_np = client.recv_state()
-            print (state_np, turn)
+            print (state_np, turn, "FINE TURNO")
 
     finally:
         print('closing socket')
@@ -84,8 +99,8 @@ class Client:
 
     def send_move(self, move):
         move_obj = {
-            "from": chr(97 + move[1]) + str(move[0] + 1),
-            "to": chr(97 + move[3]) + str(move[2] + 1)
+            "from": chr(97 + move[1]) + str(move[0]+1),
+            "to": chr(97 + move[3]) + str(move[2]+1)
         }
 
         encoded = json.dumps(move_obj).encode("UTF-8")
@@ -115,40 +130,33 @@ class Client:
         self.sock.close()
 
 
-def t_handler(lock, part, search, turn, state_np, my_heuristic):
+def timer(client, lock):
     '''
+    Handler of TIMER THREAD
+    Function used to handle the timing contraints to produce an action
+    '''
+    global move, stop_flag
+
+    lock.acquire()
+    print("----------------------->", move)
+    if move is not None:
+        client.send_move(move)
+    lock.release()
+
+    stop_flag = True
+
+
+def actual(act, part, search, turn, state_np, my_heuristic):
+    '''
+    Handler of PROCESSES
     Function used to search in a specific subdomain of possible actions
     '''
-    global move, m_value, stop_flag
     for depth in range(1, 10):
         # NB: TWO (not one) VALUES RETURNED FROM SEARCH
         action, our_value = search((turn, state_np), tablut_noPrint.Tablut(), d=depth, cutoff_test=None, eval_fn=my_heuristic,
                                    part=part)
-        lock.acquire()
-        if our_value > m_value:
-            move = action
-            m_value = our_value
-        lock.release()
 
-        if stop_flag:
-            break
-
-
-def timer(client, lock):
-    '''
-    Function used to handle the timing contraints to produce an action
-    '''
-    global move
-    global stop_flag
-
-    stop_flag = True
-
-    lock.acquire()
-    if move != None:
-        client.send_move(move)
-    lock.release()
-
-    time.sleep(1)
+        act.put((action, our_value))
 
 
 if __name__ == '__main__': main()

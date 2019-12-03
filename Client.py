@@ -1,7 +1,7 @@
 '''Client'''
 
 import games
-import tablut
+import tablut_noPrint
 import socket
 import json
 import numpy as np
@@ -24,7 +24,7 @@ def main():
         exit(1)
 
     client = Client(host, port)
-    my_heuristic = tablut.Tablut().white_evaluation_function
+    my_heuristic = tablut_noPrint.Tablut().white_evaluation_function
     search = games.alphabeta_cutoff_search
 
     try:
@@ -37,7 +37,7 @@ def main():
         # game loop:
         while True:
             if color == turn:
-                move = search((turn, state_np), tablut.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
+                move = search((turn, state_np), tablut_noPrint.Tablut(), d=1, cutoff_test=None, eval_fn=my_heuristic)
                 if move != None:
                     print(move)
                     client.send_move(move)
