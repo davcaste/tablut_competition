@@ -141,7 +141,8 @@ class Tablut(Game):
                         if actual_state[1][near] != 'b':
                             continue
                             #print('final state: ', actual_state[1])
-                        return 'BW', actual_state
+                        return 'BW', actual_state[1]
+
                 if self.castle in nears:
                     if (state[1][nears[0]] == 'b' or nears[0] == self.castle) and \
                         (state[1][nears[1]] == 'b' or nears[1] == self.castle) and \
@@ -566,27 +567,37 @@ class Tablut(Game):
                 checkers = (checkers[0] + dire[0], checkers[1] + dire[1])
         return tuple(possible_actions)
 
-    def move_to_winning(self, states, move=1):
+    def move_to_winning(self, state):
         # calcoliamo le possibili mosse ed valutiamo nuvamente free_line per ognuno
-        if len(states) == 0:
+        if self.free_king_line(state) > 0:
+            return 1
+
+        next_state1 = []
+        for action in self.king_actions(state):
+            next_state1.append(self.result(state,action))
+        if len(next_state1)==0:
             return 5
-        if move > 4:
-            return 5
-        next_state = []
-        for state in states:
-            if self.free_king_line(state) > 0:
-                return move
-            for action in self.king_actions(state):
-                next_state.append(self.result(state, action))
-        move += 1
-        return self.move_to_winning(tuple(next_state), move=move)
+        for state1 in next_state1:
+            if self.free_king_line(state1) > 0:
+                return 2
+
+        next_state2 = []
+        for state1 in next_state2:
+            for action2 in self.king_actions(state1):
+                next_state2.append(self.result(state1, action2))
+
+        for state2 in next_state2:
+            if self.free_king_line(state2) > 0:
+                return 3
+
+        return 5
 
 
     def white_evaluation_function(self, state):
         if self.terminal_test(state):
             return self.utility(state, self.color)
         if self.color == 'W':
-            weights = [50, 5, -2, -2, -90, 50, -0, -1, 1.5, 30, -0, -0, -0, 0, 2, 0, -50]
+            weights = [50, 5, -2, -2, -110, 50, -0, -1, 1.5, 30, -0, -0, -0, 0, 2, 0, -100]
         elif self.color == 'B':
             weights = [-25, -5, 20, 2, 90, -30, 0, 1, -1.5, -5, 0, 0, 0, -0, -2, -0, 0]
 
@@ -607,7 +618,7 @@ class Tablut(Game):
         w14 = 0#self.n_white_in_angle(state) * weights[13]
         w15 = self.n_white_in_victory(state) * weights[14]
         w16 = 0#self.n_white_in_victory_near_white(state) * weights[15]
-        w17 = 0#self.move_to_winning((state,)) * weights[16]
+        w17 = self.move_to_winning(state) * weights[16]
         weights_white = [w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17]
         return sum(weights_white)
 '''
