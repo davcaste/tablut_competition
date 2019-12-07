@@ -137,10 +137,10 @@ class Tablut(Game):
                     return 'BW', actual_state[1]
                     # king nel castello
                 if neighbor == self.castle:
-                    for near in nears:
-                        if actual_state[1][near] != 'b':
-                            continue
-                            #print('final state: ', actual_state[1])
+                    if state[1][nears[0]] == 'b' and \
+                        state[1][nears[1]] == 'b' and \
+                        state[1][nears[2]] == 'b' and \
+                        state[1][nears[3]] == 'b':
                         return 'BW', actual_state[1]
 
                 if self.castle in nears:
