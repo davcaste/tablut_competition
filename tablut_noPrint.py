@@ -137,17 +137,17 @@ class Tablut(Game):
                     return 'BW', actual_state[1]
                     # king nel castello
                 if neighbor == self.castle:
-                    if state[1][nears[0]] == 'b' and \
-                        state[1][nears[1]] == 'b' and \
-                        state[1][nears[2]] == 'b' and \
-                        state[1][nears[3]] == 'b':
+                    if actual_state[1][nears[0]] == 'b' and \
+                        actual_state[1][nears[1]] == 'b' and \
+                        actual_state[1][nears[2]] == 'b' and \
+                        actual_state[1][nears[3]] == 'b':
                         return 'BW', actual_state[1]
 
                 if self.castle in nears:
-                    if (state[1][nears[0]] == 'b' or nears[0] == self.castle) and \
-                        (state[1][nears[1]] == 'b' or nears[1] == self.castle) and \
-                        (state[1][nears[2]] == 'b' or nears[2] == self.castle) and \
-                        (state[1][nears[3]] == 'b' or nears[3] == self.castle):
+                    if (actual_state[1][nears[0]] == 'b' or nears[0] == self.castle) and \
+                        (actual_state[1][nears[1]] == 'b' or nears[1] == self.castle) and \
+                        (actual_state[1][nears[2]] == 'b' or nears[2] == self.castle) and \
+                        (actual_state[1][nears[3]] == 'b' or nears[3] == self.castle):
                         return 'BW', actual_state[1]
 
                 # bianco/re mangia nero
@@ -618,7 +618,7 @@ class Tablut(Game):
         w14 = 0#self.n_white_in_angle(state) * weights[13]
         w15 = self.n_white_in_victory(state) * weights[14]
         w16 = 0#self.n_white_in_victory_near_white(state) * weights[15]
-        w17 = self.move_to_winning(state) * weights[16]
+        w17 = 0#self.move_to_winning(state) * weights[16]
         weights_white = [w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17]
         return sum(weights_white)
 '''
